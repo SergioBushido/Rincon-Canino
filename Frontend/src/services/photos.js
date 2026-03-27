@@ -11,11 +11,11 @@ export const getPhotos = async () => {
 
 export const getPhotosByPet = async (id) => {
   const response = await fetch(`${url}/photos/pet/${id}`);
-  console.log("Response:", response);
   const photos = await response.json();
-  console.log("foto get foto:", photos);
-  return [photos];
+  return photos;
 };
+
+export const BASE_URL = url.replace("/api", "");
 
 // Función para subir una foto
 export async function uploadPhoto(formData) {

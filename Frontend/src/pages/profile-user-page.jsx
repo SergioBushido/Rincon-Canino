@@ -132,7 +132,7 @@ export default function ProfileUserPage() {
               <ReservationInfo id_cliente={user.id} id_pet={activePet.id} />
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                <ClientClassReservation onReservationSuccess={() => reloadReservClasses(user.id)} />
+                <ClientClassReservation onReservationSuccess={() => reloadReservClasses(user.id)} id_cliente={user.id} id_pet={activePet.id} mascota={activePet} />
                 <Stay id_cliente={user.id} mascota={activePet} userName={user.nombre} />
               </div>
               

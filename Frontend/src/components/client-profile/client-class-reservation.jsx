@@ -23,18 +23,20 @@ import { getDates, getHours, getReservation, formatDate, shouldDisableDate } fro
 
 ClientClassReservation.propTypes = {
   onReservationSuccess: PropTypes.func,
+  mascota: PropTypes.object,
 };
 
-export default function ClientClassReservation({ onReservationSuccess }) {
+export default function ClientClassReservation({ onReservationSuccess, mascota }) {
   const [showModal, setShowModal] = useState(false);
   const [isGroupClass, setIsGroupClass] = useState(false);
-  
+
   const [availableClasses, setAvailableClasses] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedHour, setSelectedHour] = useState("");
   const [showHours, setShowHours] = useState(false);
-  
+
   const [client, setClient] = useState(null);
+
   const toaster = useToaster();
 
   useEffect(() => {
@@ -49,7 +51,7 @@ export default function ClientClassReservation({ onReservationSuccess }) {
           console.error("Error al cargar datos del cliente:", error);
           toaster.push(<Notification type="error" header="Error al cargar perfil" />, { placement: "topEnd" });
         });
-      
+
       const fetchClasses = async () => {
         try {
           if (isGroupClass) {
@@ -64,7 +66,7 @@ export default function ClientClassReservation({ onReservationSuccess }) {
           toaster.push(<Notification type="error" header="Error al cargar clases" />, { placement: "topEnd" });
         }
       };
-      
+
       fetchClasses();
     }
   }, [showModal, isGroupClass, toaster]);
@@ -83,15 +85,20 @@ export default function ClientClassReservation({ onReservationSuccess }) {
       return;
     }
 
+    if (!mascota?.id) {
+      toaster.push(<Notification type="error" header="Selecciona una mascota" closable>Seleccioná una mascota desde el menú superior antes de reservar.</Notification>, { placement: "topEnd" });
+      return;
+    }
+
     const reservationId = getReservation(availableClasses, selectedDate, selectedHour);
 
     if (!reservationId) {
-        toaster.push(<Notification type="error" header="Error en la reserva" closable>No se pudo encontrar la clase seleccionada.</Notification>, { placement: "topEnd" });
-        return;
+      toaster.push(<Notification type="error" header="Error en la reserva" closable>No se pudo encontrar la clase seleccionada.</Notification>, { placement: "topEnd" });
+      return;
     }
 
     try {
-      const result = await createReservation(reservationId, client.id);
+      const result = await createReservation(reservationId, mascota.id);
 
       if (result && result.error) {
         throw new Error(result.error);
@@ -114,6 +121,11 @@ export default function ClientClassReservation({ onReservationSuccess }) {
       <div className="p-8 bg-[#161616] border border-white/5 rounded-[2.5rem] shadow-2xl h-full flex flex-col">
         <h3 className="text-2xl font-black text-white uppercase italic tracking-tight">Reserva tu <span className="text-zinc-500">Clase</span></h3>
         <p className="text-zinc-400 mt-2 mb-6">Consulta los horarios y únete a nuestras sesiones de entrenamiento.</p>
+        {mascota && (
+          <p className="text-xs text-zinc-500 mb-4 uppercase tracking-widest font-bold">
+            Mascota: <span className="text-brand-cyan">{mascota.nombre}</span>
+          </p>
+        )}
         <button onClick={handleOpenModal} className="relative w-full py-4 group/btn overflow-hidden rounded-2xl transition-all duration-500 shadow-[0_0_20px_rgba(6,182,212,0.1)] hover:shadow-[0_0_30px_rgba(6,182,212,0.2)] mt-auto">
           <div className="absolute inset-0 bg-gradient-to-r from-brand-cyan to-brand-violet opacity-90 group-hover/btn:scale-105 transition-transform duration-500" />
           <span className="relative text-[10px] font-black uppercase tracking-[0.3em] text-white">Reservar Clase</span>
@@ -124,6 +136,7 @@ export default function ClientClassReservation({ onReservationSuccess }) {
         <Modal.Header className="pb-4 border-b border-white/5">
           <Modal.Title className="text-white font-black uppercase tracking-widest text-xs italic">
             Reservar <span className={isGroupClass ? "text-brand-violet" : "text-brand-cyan"}>Entrenamiento</span>
+            {mascota && <span className="text-zinc-500"> — {mascota.nombre}</span>}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body className="py-8">
@@ -132,16 +145,16 @@ export default function ClientClassReservation({ onReservationSuccess }) {
             <div className="space-y-8 flex flex-col justify-between">
               <div className="space-y-6">
                 <div className="flex justify-between items-center">
-                    <h3 className="text-xl font-bold text-white">
-                        {isGroupClass ? 'Entrena en ' : 'Entrenamiento '}
-                        <span className="text-zinc-500">{isGroupClass ? 'comunidad' : 'personalizado'}</span>
-                    </h3>
-                    <Toggle
-                        checked={isGroupClass}
-                        onChange={setIsGroupClass}
-                        checkedChildren="Grupal"
-                        unCheckedChildren="Individual"
-                    />
+                  <h3 className="text-xl font-bold text-white">
+                    {isGroupClass ? 'Entrena en ' : 'Entrenamiento '}
+                    <span className="text-zinc-500">{isGroupClass ? 'comunidad' : 'personalizado'}</span>
+                  </h3>
+                  <Toggle
+                    checked={isGroupClass}
+                    onChange={setIsGroupClass}
+                    checkedChildren="Grupal"
+                    unCheckedChildren="Individual"
+                  />
                 </div>
 
                 {showHours ? (
@@ -197,7 +210,7 @@ export default function ClientClassReservation({ onReservationSuccess }) {
                   onChange={(date) => {
                     setSelectedDate(date);
                     setShowHours(true);
-                    setSelectedHour(""); // Reset hour selection
+                    setSelectedHour("");
                   }}
                   className="custom-inline-picker"
                   format="dd/MM/yyyy"

@@ -1,12 +1,10 @@
 import { useState, useEffect } from "react";
 import {
-  Button,
   Modal,
   Form,
   Notification,
   useToaster,
   DateRangePicker,
-  SelectPicker,
 } from "rsuite";
 import isBefore from "date-fns/isBefore";
 import startOfDay from "date-fns/startOfDay";
@@ -17,7 +15,6 @@ import PropTypes from "prop-types";
 import { getStayAll } from "../../services/stay";
 import { createStayClient } from "../../services/stay_client";
 import { getClient } from "../../services/client";
-import { getPet } from "../../services/pet";
 
 // Formateo seguro de fechas
 const safeFormat = (date) => {
@@ -27,14 +24,13 @@ const safeFormat = (date) => {
 
 ClientStayReservation.propTypes = {
   onReservationSuccess: PropTypes.func,
+  mascota: PropTypes.object,
 };
 
-export default function ClientStayReservation({ onReservationSuccess }) {
+export default function ClientStayReservation({ onReservationSuccess, mascota }) {
   const [showModal, setShowModal] = useState(false);
   const [stays, setStays] = useState([]);
   const [client, setClient] = useState(null);
-  const [pets, setPets] = useState([]);
-  const [selectedPet, setSelectedPet] = useState(null);
   const [selectedDates, setSelectedDates] = useState([]);
   const toaster = useToaster();
 
@@ -49,17 +45,7 @@ export default function ClientStayReservation({ onReservationSuccess }) {
         });
 
       getClient()
-        .then(c => {
-          setClient(c);
-          if (c?.id) {
-            getPet(c.id).then(petsData => {
-              setPets(petsData || []);
-              if (petsData?.length === 1) {
-                setSelectedPet(petsData[0].id);
-              }
-            });
-          }
-        })
+        .then(setClient)
         .catch(error => {
           console.error("Error al cargar datos del cliente:", error);
           toaster.push(<Notification type="error" header="Error al cargar perfil" />, { placement: "topEnd" });
@@ -69,7 +55,6 @@ export default function ClientStayReservation({ onReservationSuccess }) {
 
   const handleOpenModal = () => {
     setSelectedDates([]);
-    setSelectedPet(null);
     setShowModal(true);
   };
 
@@ -81,8 +66,13 @@ export default function ClientStayReservation({ onReservationSuccess }) {
       return;
     }
 
-    if (!selectedPet) {
-      toaster.push(<Notification type="error" header="Falta Mascota" closable>Por favor, selecciona una mascota para la reserva.</Notification>, { placement: "topEnd" });
+    if (!mascota?.id) {
+      toaster.push(<Notification type="error" header="Sin mascota seleccionada" closable>Seleccioná una mascota desde el menú superior antes de reservar.</Notification>, { placement: "topEnd" });
+      return;
+    }
+
+    if (!client || !client.id) {
+      toaster.push(<Notification type="error" header="Error de usuario" closable>No se pudo identificar al cliente. Por favor, inicia sesión de nuevo.</Notification>, { placement: "topEnd" });
       return;
     }
 
@@ -102,13 +92,8 @@ export default function ClientStayReservation({ onReservationSuccess }) {
       return;
     }
 
-    if (!client || !client.id) {
-      toaster.push(<Notification type="error" header="Error de usuario" closable>No se pudo identificar al cliente. Por favor, inicia sesión de nuevo.</Notification>, { placement: "topEnd" });
-      return;
-    }
-
     try {
-      const result = await createStayClient(selectedStayBlock.id, selectedPet, safeFormat(startDate), safeFormat(endDate));
+      const result = await createStayClient(selectedStayBlock.id, mascota.id, safeFormat(startDate), safeFormat(endDate));
 
       if (result && result.error) {
         throw new Error(result.error);
@@ -128,7 +113,12 @@ export default function ClientStayReservation({ onReservationSuccess }) {
     <>
       <div className="p-8 bg-[#161616] border border-white/5 rounded-[2.5rem] shadow-2xl">
         <h3 className="text-2xl font-black text-white uppercase italic tracking-tight">Reserva tu <span className="text-zinc-500">Estancia</span></h3>
-        <p className="text-zinc-400 mt-2 mb-6">Consulta la disponibilidad y asegura un lugar para tu mascota.</p>
+        <p className="text-zinc-400 mt-2 mb-4">Consulta la disponibilidad y asegura un lugar para tu mascota.</p>
+        {mascota && (
+          <p className="text-xs text-zinc-500 mb-6 uppercase tracking-widest font-bold">
+            Mascota: <span className="text-brand-violet">{mascota.nombre}</span>
+          </p>
+        )}
         <button onClick={handleOpenModal} className="relative w-full py-4 group/btn overflow-hidden rounded-2xl transition-all duration-500 shadow-[0_0_20px_rgba(139,92,246,0.1)] hover:shadow-[0_0_30px_rgba(139,92,246,0.2)]">
           <div className="absolute inset-0 bg-gradient-to-r from-brand-violet to-brand-cyan opacity-90 group-hover/btn:scale-105 transition-transform duration-500" />
           <span className="relative text-[10px] font-black uppercase tracking-[0.3em] text-white">Iniciar Reserva</span>
@@ -139,6 +129,7 @@ export default function ClientStayReservation({ onReservationSuccess }) {
         <Modal.Header className="pb-4 border-b border-white/5">
           <Modal.Title className="text-white font-black uppercase tracking-widest text-xs italic">
             Reservar <span className="text-brand-violet">Alojamiento</span>
+            {mascota && <span className="text-zinc-500"> — {mascota.nombre}</span>}
           </Modal.Title>
         </Modal.Header>
         <Modal.Body className="py-8">
@@ -164,21 +155,6 @@ export default function ClientStayReservation({ onReservationSuccess }) {
               <p className="text-[10px] text-zinc-600 uppercase tracking-widest mt-2 ml-2">
                 Solo se mostrarán los periodos habilitados.
               </p>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-2">
-                Selecciona la mascota
-              </label>
-              <SelectPicker
-                block
-                data={pets.map(p => ({ label: p.nombre, value: p.id }))}
-                value={selectedPet}
-                onChange={setSelectedPet}
-                placeholder="Elige tu mascota"
-                className="custom-input-picker"
-                searchable={false}
-              />
             </div>
           </Form>
         </Modal.Body>

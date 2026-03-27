@@ -66,7 +66,7 @@ export default function Stay({ id_cliente, mascota, userName }) {
     <CustomProvider theme="dark">
       <div className="space-y-10">
         {/* Booking Card */}
-        <ClientStayReservation onReservationSuccess={fetchClientStays} />
+        <ClientStayReservation onReservationSuccess={fetchClientStays} mascota={mascota} />
       </div>
     </CustomProvider>
   );

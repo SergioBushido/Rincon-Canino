@@ -25,10 +25,10 @@ sequelize.authenticate()
   .then(() => {
     console.log('Conexión a la base de datos establecida correctamente.');
     console.log("Detalles de conexión:");
-    console.log(`  Host: ${process.env.DB_HOST}`);
-    console.log(`  Puerto: ${process.env.DB_PORT}`);
-    console.log(`  Base de datos: ${process.env.DB_DATABASE}`);
-    console.log(`  Usuario: ${process.env.DB_USER}`);
+    console.log(`  Host: ${process.env.HOST}`);
+    console.log(`  Puerto: ${process.env.PORT}`);
+    console.log(`  Base de datos: ${process.env.DATABASE}`);
+    console.log(`  Usuario: ${process.env.USER}`);
   })
   .catch((err) => {
     console.error('No se pudo conectar a la base de datos:', err);
